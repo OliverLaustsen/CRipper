@@ -18,3 +18,7 @@
 go.work
 
 images/*
+
+serviceAccount.json
+
+.env

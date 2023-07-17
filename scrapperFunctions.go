@@ -22,6 +22,7 @@ func ScrapeImage(url string, cl chan string) {
 		ss := strings.Split(srcUrl, "/")
 		fmt.Println("start download")
 		r = DownloadFile(srcUrl, "./images/"+ss[len(ss)-1])
+
 		fmt.Println(<-r)
 		defer close(r)
 	})
