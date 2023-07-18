@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -11,20 +12,24 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-func ScrapeImage(url string, cl chan string) {
+func ScrapeImage(url string, cl chan string, ctx context.Context) {
 	fmt.Println("HIT")
 
 	c := colly.NewCollector()
-	var r chan string
 
 	c.OnHTML("div#readerarea img", func(e *colly.HTMLElement) {
-		srcUrl := e.Attr("src")
-		ss := strings.Split(srcUrl, "/")
-		fmt.Println("start download")
-		r = DownloadFile(srcUrl, "./images/"+ss[len(ss)-1])
-
-		fmt.Println(<-r)
-		defer close(r)
+		// srcUrl := e.Attr("src")
+		// ss := strings.Split(srcUrl, "/")
+		// fmt.Println("start download")
+		// r := DownloadFile(srcUrl, "./images/"+ss[len(ss)-1])
+		// fmt.Println(<-r)
+		// cuf := UploadFile(ctx, "images/"+ss[len(ss)-1], "test"+ss[len(ss)-1])
+		// fmt.Println(<-cuf)
+		// err := os.Remove("images/" + ss[len(ss)-1])
+		// if err != nil {
+		// 	log.Fatal("failed while removing img: ", e)
+		// }
+		// defer close(r)
 	})
 	c.Visit(url)
 	c.Wait()
@@ -50,8 +55,8 @@ func ScrapeSiteForReleases(urls []string, targets map[string]int64) []string {
 			fmt.Println("Error: ", err)
 		}
 
+		fList = append(fList, <-tc)
 	}
-	fList = append(fList, <-tc)
 	return fList
 }
 

@@ -2,7 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"log"
+	"net/http"
+	"os"
 
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
@@ -32,29 +36,72 @@ func CreateDatabaseClient(ctx context.Context) (*firestore.Client, *auth.Client)
 	return client, authClient
 }
 
-// func CreateStorageClient(ctx context.Context) {
-// 	bName := GetEnvVariable("STORAGE_BUCKET")
+func UploadFile(ctx context.Context, fromFilePath string, toFilePath string) chan string {
+	c := make(chan string, 1)
+	bName := GetEnvVariable("STORAGE_BUCKET")
+	config := &firebase.Config{
+		StorageBucket: bName,
+	}
+	app, err := firebase.NewApp(context.Background(), config, option.WithCredentialsFile("./serviceAccount.json"))
+	if err != nil {
+		log.Fatalf("error initializing app: %v\n", err)
+	}
 
-// 	client := storage.NewClient(ctx)
-// }
+	client, err := app.Storage(context.Background())
+	if err != nil {
+		log.Fatalf("error initializing storage client: %v\n", err)
+	}
 
-// func CreateStorageClient(ctx context.Context) {
+	file, err := os.Open(fromFilePath)
+	if err != nil {
+		log.Fatalf("error opening file: %v\n", err)
+	}
+	defer file.Close()
 
-// 	opt := option.WithCredentialsFile("path/to/serviceAccountKey.json")
-// 	app, err := firebase.NewApp(context.Background(), config, opt)
-// 	if err != nil {
-// 		log.Fatalln(err)
-// 	}
+	bucket, err := client.DefaultBucket()
+	if err != nil {
+		log.Fatalf("error getting default bucket: %v\n", err)
+	}
 
-// 	client, err := app.Storage(context.Background())
-// 	if err != nil {
-// 		log.Fatalln(err)
-// 	}
+	object := bucket.Object(toFilePath)
+	writer := object.NewWriter(ctx)
 
-// 	bucket, err := client.Bucket(bName).ob
-// 	if err != nil {
-// 		log.Fatalln(err)
-// 	}
+	if _, err := io.Copy(writer, file); err != nil {
+		log.Fatalf("error uploading file: %v\n", err)
+	}
 
-// 	return bucket
-// }
+	if err := writer.Close(); err != nil {
+		log.Fatalf("error closing writer: %v\n", err)
+	}
+	c <- "File uploaded successfully"
+
+	return c
+}
+
+func DownloadFile(URL, fileName string) chan string {
+	r := make(chan string, 1)
+	//Get the response bytes from the url
+	response, err := http.Get(URL)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != 200 {
+		fmt.Println("Received non 200 response code")
+	}
+	//Create a empty file
+	file, err := os.Create(fileName)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer file.Close()
+
+	//Write the bytes to the fiel
+	_, err = io.Copy(file, response.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+	r <- "Download of " + URL + " is finished"
+	return r
+}
