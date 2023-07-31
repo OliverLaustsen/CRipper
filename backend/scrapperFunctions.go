@@ -27,7 +27,7 @@ func ScrapeImage(v TYPES.Visit, cl chan string, ctx context.Context) {
 		fmt.Println("start download")
 		r := DownloadFile(srcUrl, "./images/"+ss[len(ss)-1])
 		fmt.Println(<-r)
-		cuf := UploadFile(ctx, "images/"+ss[len(ss)-1], "test"+ss[len(ss)-1])
+		cuf := UploadFile(ctx, "images/"+ss[len(ss)-1], v.Comic+"/"+strconv.FormatInt(v.Chapter, 10)+"/"+ss[len(ss)-1])
 		fmt.Println(<-cuf)
 		err := os.Remove("images/" + ss[len(ss)-1])
 		if err != nil {
