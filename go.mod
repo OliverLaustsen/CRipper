@@ -1,4 +1,4 @@
-module web-scraper
+module CRipper
 
 go 1.18
 

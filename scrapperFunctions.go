@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
 	"strconv"
 	"strings"
 	"unicode"
@@ -10,34 +12,36 @@ import (
 	"github.com/gocolly/colly"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
+
+	TYPES "CRipper/model"
 )
 
-func ScrapeImage(url string, cl chan string, ctx context.Context) {
-	fmt.Println("HIT")
+func ScrapeImage(v TYPES.Visit, cl chan string, ctx context.Context) {
+	fmt.Println("HIT", v)
 
 	c := colly.NewCollector()
 
 	c.OnHTML("div#readerarea img", func(e *colly.HTMLElement) {
-		// srcUrl := e.Attr("src")
-		// ss := strings.Split(srcUrl, "/")
-		// fmt.Println("start download")
-		// r := DownloadFile(srcUrl, "./images/"+ss[len(ss)-1])
-		// fmt.Println(<-r)
-		// cuf := UploadFile(ctx, "images/"+ss[len(ss)-1], "test"+ss[len(ss)-1])
-		// fmt.Println(<-cuf)
-		// err := os.Remove("images/" + ss[len(ss)-1])
-		// if err != nil {
-		// 	log.Fatal("failed while removing img: ", e)
-		// }
-		// defer close(r)
+		srcUrl := e.Attr("src")
+		ss := strings.Split(srcUrl, "/")
+		fmt.Println("start download")
+		r := DownloadFile(srcUrl, "./images/"+ss[len(ss)-1])
+		fmt.Println(<-r)
+		cuf := UploadFile(ctx, "images/"+ss[len(ss)-1], "test"+ss[len(ss)-1])
+		fmt.Println(<-cuf)
+		err := os.Remove("images/" + ss[len(ss)-1])
+		if err != nil {
+			log.Fatal("failed while removing img: ", e)
+		}
+		defer close(r)
 	})
-	c.Visit(url)
+	c.Visit(v.Url)
 	c.Wait()
 }
 
-func ScrapeSiteForReleases(urls []string, targets map[string]int64) []string {
-	fList := []string{}
-	tc := make(chan string, 1)
+func ScrapeSiteForReleases(urls []string, targets map[string]int64) []TYPES.Visit {
+	fList := []TYPES.Visit{}
+	tc := make(chan TYPES.Visit, len(targets))
 
 	for _, url := range urls {
 		c := colly.NewCollector()
@@ -56,11 +60,13 @@ func ScrapeSiteForReleases(urls []string, targets map[string]int64) []string {
 		}
 
 		fList = append(fList, <-tc)
+		fmt.Println(fList)
 	}
+	fmt.Println("returning from scrape")
 	return fList
 }
 
-func scrapeForAsura(c *colly.Collector, targets map[string]int64, tc chan string) {
+func scrapeForAsura(c *colly.Collector, targets map[string]int64, tc chan TYPES.Visit) {
 
 	c.OnHTML("div.luf", func(e *colly.HTMLElement) {
 		temps := strings.Split(e.Text, "\n")
@@ -80,7 +86,12 @@ func scrapeForAsura(c *colly.Collector, targets map[string]int64, tc chan string
 			if chapNum > targets[output] {
 				fmt.Println("New Version -", chapNum)
 				href := e.DOM.Children().Get(1).FirstChild.FirstChild.Attr[0].Val
-				tc <- href
+				v := TYPES.Visit{
+					Chapter: chapNum,
+					Url:     href,
+					Comic:   output,
+				}
+				tc <- v
 			}
 		}
 	})
