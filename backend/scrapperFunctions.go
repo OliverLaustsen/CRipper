@@ -3,10 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
-	"os"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/gocolly/colly"
@@ -16,24 +15,23 @@ import (
 	TYPES "CRipper/model"
 )
 
-func ScrapeImage(v TYPES.Visit, cl chan string, ctx context.Context) {
-	fmt.Println("HIT", v)
-
+func ScrapeImage(v TYPES.Visit, ctx context.Context) {
 	c := colly.NewCollector()
-
+	time.Sleep(time.Second * 2)
+	fmt.Println("done", v.Comic)
 	c.OnHTML("div#readerarea img", func(e *colly.HTMLElement) {
-		srcUrl := e.Attr("src")
-		ss := strings.Split(srcUrl, "/")
-		fmt.Println("start download")
-		r := DownloadFile(srcUrl, "./images/"+ss[len(ss)-1])
-		fmt.Println(<-r)
-		cuf := UploadFile(ctx, "images/"+ss[len(ss)-1], v.Comic+"/"+strconv.FormatInt(v.Chapter, 10)+"/"+ss[len(ss)-1])
-		fmt.Println(<-cuf)
-		err := os.Remove("images/" + ss[len(ss)-1])
-		if err != nil {
-			log.Fatal("failed while removing img: ", e)
-		}
-		defer close(r)
+		// srcUrl := e.Attr("src")
+		// ss := strings.Split(srcUrl, "/")
+		// fmt.Println("start download")
+		// r := DownloadFile(srcUrl, "./images/"+ss[len(ss)-1])
+		// fmt.Println(<-r)
+		// cuf := UploadFile(ctx, "images/"+ss[len(ss)-1], v.Comic+"/"+strconv.FormatInt(v.Chapter, 10)+"/"+ss[len(ss)-1])
+		// fmt.Println(<-cuf)
+		// err := os.Remove("images/" + ss[len(ss)-1])
+		// if err != nil {
+		// 	log.Fatal("failed while removing img: ", e)
+		// }
+		// defer close(r)
 	})
 	c.Visit(v.Url)
 	c.Wait()
@@ -60,9 +58,7 @@ func ScrapeSiteForReleases(urls []string, targets map[string]int64) []TYPES.Visi
 		}
 
 		fList = append(fList, <-tc)
-		fmt.Println(fList)
 	}
-	fmt.Println("returning from scrape")
 	return fList
 }
 
@@ -86,6 +82,7 @@ func scrapeForAsura(c *colly.Collector, targets map[string]int64, tc chan TYPES.
 			if chapNum > targets[output] {
 				fmt.Println("New Version -", chapNum)
 				href := e.DOM.Children().Get(1).FirstChild.FirstChild.Attr[0].Val
+				fmt.Println("href", href)
 				v := TYPES.Visit{
 					Chapter: chapNum,
 					Url:     href,

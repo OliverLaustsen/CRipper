@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/joho/godotenv"
 )
@@ -22,11 +23,17 @@ func main() {
 	comicMap := createComicMap()
 	visitList := ScrapeSiteForReleases(sources, comicMap)
 	dbc.Collection("comics").NewDoc().Create(ctx, comicMap)
-	c := make(chan string, 2)
+	var wg sync.WaitGroup
 
 	for _, e := range visitList {
-		ScrapeImage(e, c, ctx)
+		wg.Add(1)
+		e := e
+		go func() {
+			ScrapeImage(e, ctx)
+			wg.Done()
+		}()
 	}
+	wg.Wait()
 	fmt.Println("Complete")
 }
 
